@@ -1,6 +1,6 @@
 # STAT0006-Regression Modelling-Project-2
 
-# STAT0006 Coursework: Ice Cream Sales Prediction Model
+## Title Coursework: Ice Cream Sales Prediction Model
 
 This project is a key academic component for the STAT0006 module at University College London (UCL), focusing on constructing an Ordinary Least Squares (OLS) regression model. The primary objective is to predict ice cream sales using a specified set of variables.
 
