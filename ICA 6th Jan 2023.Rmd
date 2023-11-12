@@ -1,0 +1,475 @@
+---
+title: "STAT0006 ICA 3"
+author: 'Student numbers: 123456789, 123456789, 123456789, 123456789'
+subtitle: Group XXX
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-packages, include=FALSE}
+library(scales)
+
+```
+
+``` {r, echo=FALSE}
+# importing data set
+ic0 <- read.csv('ice_creams.csv')
+
+# identifying and removing NA values
+# which(is.na(ic0), arr.ind = TRUE)
+ic <- ic0[-c(271,249,177),]
+
+ic
+```
+
+### Introduction to the data
+The dataset `icecream.csv ` contains information about 314 weekly sales of certain types of ice cream sold in a supermarket chain over the past five years. The purpose of this analysis is to understand whether and how the 10 different variables affect the variable `sales` representing the number of ice creams of a particular brand sold in a store during a week.
+
+
+The variables `brand`, `brand_competitors`, ` distance `, `holiday`, `milk`, `promotion`, `store_type`, `temperature `, `wind`, `year`,   each represents: the brand of the ice cream which is sold; the number of other ice cream brand competitors available in the particular week; the distance to the closest supermarket other than itself (in miles); if there was a nation bank holiday in the particular week; if there was a promotion campaign on the brand on this brand of ice cream; whether the storesize is under the category `Small`, `Medium` or `Large`; the average weekly storetemperature (in °C); the average wind speed at the store each week (in knots) and which year the sales were registered, respectively.
+
+The original dataset given contains three sales with missing values, removed them from the dataset so the new dataset we work with only contains information about 311 ice cream sales. The number of ice cream sold varies between 0 to 2444 each week, with a mean of 530.4 ice creams. 
+
+Figure 1 demonstrates the effect of the `brand` (left) and the effect of the `store_type` (right) on the ice cream `sales` amount with boxplots. From the left plot, ice creams from `BrandA` appears to be bought more among the other types of ice creams. `BrandB` has a middle popularity while `BrandC` seems to have the lowest popularity. From the right plot we can see a that as the size of the particular store decreases the sales amount of the ice creams also decreases.
+
+```{r, echo=FALSE, warning=FALSE, fig.height=4, fig.width=10, fig.align='center', fig.cap="Figure 1: The boxplots show the number of ice cream sold each week in a store plotted against the categorical variables brand(left) and storesize(right), with orange dots representing the mean number of sales in each category."}
+
+par(mfrow=c(1,2))
+
+boxplot(ic$sales~ic$brand, ylab = "Sales (No. of Ice Creams)", xlab = "Brand" , col = "grey", main = "Sales & Type of Brand",cex.axis = 0.8)
+points(c(mean(ic$sales[ic$brand=="BrandA"]), 
+         mean(ic$sales[ic$brand=="BrandB"]),
+         mean(ic$sales[ic$brand=="BrandC"])),
+       pch=16, cex=1.5, col="orange")
+
+boxplot(ic$sales~ic$store_type, ylab = "Sales (No. of Ice Creams)", xlab = "Size of Store", col = "grey", main = "Sales & Size of store", cex.axis = 0.8)
+points(c(mean(ic$sales[ic$store_type=="Large"]),
+         mean(ic$sales[ic$store_type=="Medium"]),
+         mean(ic$sales[ic$store_type=="Small"])),
+       pch=16, cex=1.5, col="orange")
+
+```
+From Figure 2 we notice that the weekly sales amount of the ice creams tends to be higher if there was a promotion running on that particular brand of ice cream compared to no promotion campaigns that week. Also, during weeks with national bank holidays there are slightly more sales compared to weeks without bank holidays.
+
+```{r, echo=FALSE, warning=FALSE, fig.width=10, fig.align='center', fig.cap="Figure 2: Boxplots of the weekly sales amount against the binary variables promotion (left) and holiday (right)."}
+par(mfrow=c(1,2))
+
+boxplot(ic$sales~ic$promotion, ylab = "Sales (No. of Ice Creams)", xlab = "Y/N Promotion", col = "grey", main = "Sales & Whether there is Promotion", names = c("Without Promotion", "With Promotion"), cex.axis = 0.8)
+points(c(mean(ic$sales[ic$promotion=="N"]),
+         mean(ic$sales[ic$promotion=="Y"])),
+         pch=16, cex=1.5, col = "orange")
+
+boxplot(ic$sales~ic$holiday, ylab = "Sales (No. of Ice Creams)", xlab = "Y/N Bank Holiday" ,col = "grey", main = "Sales & Whether there is Bank Holiday", names = c(" ", " "), cex.axis = 0.8)
+points(c(mean(ic$sales[ic$holiday=="N"]), 
+         mean(ic$sales[ic$holiday=="Y"])),
+         pch=16, cex=1.5, col = "orange")
+axis(1,at = c(1,2), labels = c("Without Bank Holiday", "With Bank Holiday"),cex.axis = 0.8)
+```
+Both Figure 3 and Figure 4 don’t show a clear linear relationship between `sales` and `year` and between `sales` and ` brand_competitors` , respectively. Hence, we might need to disregard the variables `year` and `brand_competitors` while building the normal linear regression model for the ice cream `sales`. 
+
+```{r echo=FALSE, warning=FALSE,fig.width=10, fig.align='center', fig.cap="Figure 3: Boxplots of the weekly ice cream sales amount with respect to the year the sales were recorded."}
+boxplot(ic$sales~ic$year, ylab = "Sales (No. of Ice Creams)", xlab = "Year", col = "grey", main = "Sales between 2018 and 2022", cex.axis = 0.8)
+points(c(mean(ic$sales[ic$year== 2018]),
+        mean(ic$sales[ic$year== 2019]),
+        mean(ic$sales[ic$year== 2020]),
+        mean(ic$sales[ic$year== 2021]),
+        mean(ic$sales[ic$year== 2022])),
+       pch=16, cex=1.5, col="orange")
+
+```
+
+```{r echo=FALSE, fig.width=10, fig.align='center', fig.cap="Figure 4: Boxplots of the number of ice cream sold with respect to number of ice cream brand competitors."}
+boxplot(ic$sales~ic$brand_competitors, ylab = "Sales (No. of Ice Creams)", xlab = "No. of Competitors", col = "grey", main = "Sales & No of Competitors", cex.axis = 0.8)
+points(c(mean(ic$sales[ic$brand_competitors== 3]),
+        mean(ic$sales[ic$brand_competitors== 4]),
+        mean(ic$sales[ic$brand_competitors== 5]),
+        mean(ic$sales[ic$brand_competitors== 6]),
+        mean(ic$sales[ic$brand_competitors== 7]),
+        mean(ic$sales[ic$brand_competitors== 8]),
+        mean(ic$sales[ic$brand_competitors== 9])),
+       pch=16, cex=1.5, col="orange")
+```
+
+From the top-left plot in Figure 5 we can see a weak but positive linear connection between `sales` and `distance`, while the top-right plot exemplifies a clear positive linear relationship between `sales` and `temperature`. The relationships between `sales` and each of the variables `milk` and `wind` don’t indicate linearity, so both of them may be omitted when building the linear model. 
+
+```{r echo=FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.align='center', fig.cap="Figure 5: Scatterplots that visualize the relationship between the ice cream sales and each of the variables distance (top-left), temperature (top-right) and milk (bottom-left) and wind (bottom-right)."}
+par(mfrow=c(2,2))
+
+plot(ic$sales~ic$distance, ylab = "Sales (No. of Ice Creams)", xlab = "Distance to the nearest other supermarket (miles)", main = "Sales & Distance", pch = 20, col=alpha("darkblue",0.4))
+
+
+
+plot(ic$sales~ic$temperature, ylab = "Sales (No. of Ice Creams)", xlab = "Average Weekly Temperature (°C) ", main = "Sales & Temperature", pch = 20, col=alpha("darkblue",0.4))
+
+plot(ic$sales~ic$milk, ylab = "Sales (No. of Ice Creams)", xlab = "Average Weekly Price of Milk (pence/litre)", main = "Sales & Milk", pch = 20, col=alpha("darkblue",0.4))
+
+plot(ic$sales~ic$wind, ylab = "Sales (No. of Ice Creams)", xlab = "Average Weekly Speed of Wind (knots)", main = "Sales & Wind", pch = 20, col=alpha("darkblue",0.4))
+#m<-lm(sqrt(ic$distance)~ic$sales)
+#print(summary(m))
+```
+
+In summary, six? of the ten variables seem to have an effect on the weekly sales of ice cream and hence need to be considered while building the linear model.
+
+
+
+```{r  include=TRUE, echo=FALSE, warning=FALSE, fig.height=5, fig.width=10, fig.align='center'}
+
+
+M <- ic[c("sales","distance", "milk", "temperature", "wind")]
+
+panel.cor <- function(x, y){
+    usr <- par("usr"); on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- round(cor(x, y), digits=2)
+    txt <- paste0("r = ", r)
+    cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt)
+}
+# Customize upper panel
+upper.panel<-function(x, y){
+  points(x,y, pch = "." , col = "dark blue")
+}
+# Create the plots
+pairs(M, 
+      lower.panel = panel.cor,
+      upper.panel = upper.panel)
+```
+
+
+```{r}
+# PLOT OF SALES & DISTANCE, VARY ACROSS DIFFERENT CATEGORICAL VARIABLE. SIMILAR TO ICA 1
+#legend to show the color representing
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - brand)", pch = 20, col = factor(ic$brand))
+legend("topleft",legend=c("BrandA","BrandB","BrandC"),col = unique(factor(ic$brand)), pch=20)
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - brand_comp)", pch = 20, col = factor(ic$brand_competitors))
+legend("topleft",legend=unique(factor(ic$brand_competitors)),col = unique(factor(ic$brand_competitors)), pch=20)
+
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - holiday)", pch = 20, col = factor(ic$holiday))
+legend("topleft",legend=unique(factor(ic$holiday)),col = unique(factor(ic$holiday)), pch=20)
+
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - promotion)", pch = 20, col = factor(ic$promotion))
+legend("topleft",legend=unique(factor(ic$promotion)),col = unique(factor(ic$promotion)), pch=20)
+
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - store_type)", pch = 20, col = factor(ic$store_type))
+legend("topleft",legend=unique(factor(ic$store_type)),col = unique(factor(ic$store_type)), pch=20)
+
+
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - year)", pch = 20, col = factor(ic$year))
+legend("topleft",legend=unique(factor(ic$year)),col = unique(factor(ic$year)), pch=20)
+
+
+```
+```{r}
+# PLOT OF SALE & TEMPERATURE, VARY ACROSS DIFFERENT CATEGORICAL VARIABLE. SIMILAR TO ICA 1
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - brand)", pch = 20, col = factor(ic$brand))
+legend("topleft",legend=unique(factor(ic$brand)),col = unique(factor(ic$brand)), pch=20)
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - brand_comp)", pch = 20, col = factor(ic$brand_competitors))
+legend("topleft",legend=unique(factor(ic$brand_competitors)),col = unique(factor(ic$brand_competitors)), pch=20)
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - holiday)", pch = 20, col = factor(ic$holiday))
+legend("topleft",legend=unique(factor(ic$holiday)),col = unique(factor(ic$holiday)), pch=20)
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - promotion)", pch = 20, col = factor(ic$promotion))
+legend("topleft",legend=unique(factor(ic$promotion)),col = unique(factor(ic$promotion)), pch=20)
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - store_type)", pch = 20, col = factor(ic$store_type))
+legend("topleft",legend=unique(factor(ic$store_type)),col = unique(factor(ic$store_type)), pch=20)
+
+plot(ic$sales~log(3*ic$temperature + 37), ylab = "Sales (no of ice creams)", xlab = "Average Weekly Temperature", main = "Sales & Temperature (INTERACTION - year)", pch = 20, col = factor(ic$year))
+legend("topleft",legend=unique(factor(ic$year)),col = unique(factor(ic$year)), pch=20)
+
+
+```
+
+
+
+```{r include = TRUE}
+#MODEL 1 INCLUDES ALL COVARIATES
+
+model1 <- lm(sales ~ 
+               brand
+              +brand_competitors
+              +holiday
+              +year
+              +promotion
+              +store_type
+              +temperature
+              +wind
+              +distance
+              +milk, data = ic)
+summary(model1)
+```
+
+```{r include = TRUE}
+#MODEL 2 REMOVED MILK AND WIND AND YEAR
+
+model2 <- lm(sales ~ 
+               brand
+              +holiday
+              +promotion
+              +store_type
+              +temperature
+              +distance
+              , data = ic)
+summary(model2)
+
+
+#THE R-SQUARE INCREASED A BIT BUT THIS DOESNT MEAN MUCH, ALTHOUGH MAYBE A GOOD SIGN?
+
+
+```
+
+
+```{r}
+# MODEL R ADD NEW INTERACTION TERMS, ATTEMPTED TO TRANSFORM TEMPERATURE (FROM C TO F THEN SQRT, BUT NOT VERY SUCCESSFUL). ANY OTHER TRANSFORMATIONS?
+
+
+model3 <- lm(sales~ 
+               brand
+              +distance
+              +store_type
+              +temperature
+              +promotion
+              +holiday
+              +distance * store_type
+              +store_type*brand, data = ic)
+summary(model3)
+
+
+```
+```{r}
+plot(ic$sales~ic$distance, ylab = "Sales (no of ice creams)", xlab = "Distance", main = "Sales & Distance (INTERACTION - store_type)", pch = 20, col = factor(ic$store_type))
+legend("topleft",legend=unique(factor(ic$store_type)),col = unique(factor(ic$store_type)), pch=20)
+abline(model3$coef[1], model3$coef[4], lwd=3, lty=2, col="black")
+abline((model3$coef[1]+model3$coef[5]), (model3$coef[4]+model3$coef[9]), lwd=3, lty=2, col="red")
+abline((model3$coef[1]+model3$coef[6]), (model3$coef[4]+model3$coef[10]), lwd=3, lty=2, col="green")
+```
+
+```{r}
+model4 <- lm(sqrt(sales)~ 
+               brand
+              +distance
+              +store_type
+              +temperature
+              +promotion
+              +holiday
+              +distance * store_type
+              +store_type*brand, data = ic)
+summary(model4)
+
+
+```
+
+
+```{r include = TRUE}
+# CODE FOR BOX COX TRANSFORMATION FROM JENI. WE COULD USE THIS TO CHECK FOR POTENTIAL TRANSFORMATION ON Y
+
+plot(hatvalues(model3), type="h", ylab="Leverage", xlab="Observation")
+#Mean leverage is p/n = 13/311 = 0.0353
+abline(a=13/311, b=0, lty=3, col="black")
+#Twice the average leverage:
+abline(a=2*13/311, b=0, lty=3,col="blue")
+```
+```{r}
+
+ic_nol <- ic
+
+ic_nol$hii <- hatvalues(model3)
+
+ic_nol_check <- subset(ic_nol, ic_nol$hii < 2*13/311)
+
+ic_no_check <- subset(ic_nol_check_2, ic_nol_check_2$sales < 2000)
+
+max(ic_no_check$sales)
+
+```
+
+```{r}
+model_hii <- lm(sales~ 
+               brand
+              +distance
+              +store_type
+              +temperature
+              +promotion
+              +distance * store_type
+              +store_type*brand, data = ic_nol_check)
+summary(model_hii)
+
+
+```
+```{r, fig.width=14, fig.height=10, echo = FALSE}
+
+predicted_hii <- fitted(model_hii)
+plot(ic_nol_check$sales~predicted_hii, xlab = "Predicted sales", ylab = "Observed sales", main = "Model hii", pch=16, asp = 0.6)
+
+# abline(a=0, b=1, col = "red")
+# grid(nx = NULL, ny = NULL,
+#      lty = 2,      # Grid line type
+#      col = "gray", # Grid line color
+#      lwd = 1)      # Grid line width
+
+```
+
+
+```{r, fig.width=14, fig.height=10, echo = FALSE}
+par(mfrow=c(2,2))
+
+predicted1 <- fitted(model1)
+plot(ic$sales~predicted1, xlab = "Predicted sales", ylab = "Observed sales", xlim = c(0,2500), main = "Model 1", pch=16, asp = 0.6)
+abline(a=0, b=1, col = "red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 1)      # Grid line width
+
+predicted2 <- fitted(model2)
+plot(ic$sales~predicted2, xlab = "Predicted sales", ylab = "Observed sales", xlim = c(0,2500), main = "Model 2", pch=16, asp = 0.6)
+abline(a=0, b=1, col = "red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 1)      # Grid line width
+
+predicted3 <- fitted(model3)
+plot(ic$sales~predicted3, xlab = "Predicted sales", ylab = "Observed sales", xlim = c(0,2500), main = "", pch=16, asp = 0.6)
+abline(a=0, b=1, col = "red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 1)      # Grid line width
+
+predicted4 <- fitted(model4)
+plot(ic$sales~I(predicted4^2), xlab = "Predicted sales", ylab = "Observed sales", xlim = c(0,2500), main = "Model 4", pch=16, asp = 0.6)
+abline(a=0, b=1, col = "red")
+grid(nx = NULL, ny = NULL,
+     lty = 2,      # Grid line type
+     col = "gray", # Grid line color
+     lwd = 1)      # Grid line width
+
+```
+
+
+```{r, fig.width=14, fig.height=10, echo = FALSE}
+
+par(mfrow=c(2,2))
+
+
+#normality of error the term
+model3_stdres<-rstandard(model3)
+qqnorm (model3_stdres, main="Model 3 - QQPlot", ylab = "Standardised Residuals", xlab = "Quantiles of N(0,1)")
+qqline (model3_stdres)
+
+#homoscedasticity of the error term
+model3_fitted<-fitted(model3)
+plot(model3_fitted, model3_stdres, xlab="Fitted values", ylab="Standardised residuals",main="Model 3 - sr-fit",)
+abline(a=0, b=0)
+
+
+#normality of error the term
+model4_stdres<-rstandard(model4)
+qqnorm (model4_stdres, main= "Model 4 - QQPlot", ylab = "Standardised Residuals", xlab = "Quantiles of N(0,1)")
+qqline (model4_stdres)
+
+#homoscedasticity of the error term
+model4_fitted<-fitted(model4)
+plot(model4_fitted, model4_stdres, xlab="Fitted values", ylab="Standardised residuals",main="Model 4 - sr-fitted",)
+abline(a=0, b=0)
+```
+
+```{r, fig.width=14, fig.height=10, echo = FALSE}
+
+par(mfrow=c(1,2))
+
+plot(ic$milk, model3_stdres, xlab="Milk", ylab="Standardised residuals",main="Model 3 - Milk",pch = 20)
+
+plot(ic$wind, model3_stdres, xlab="Wind", ylab="Standardised residuals",main="Model 3 - Wind",pch = 20)
+
+
+
+```
+
+
+
+```{r, fig.width=14, fig.height=10, echo = FALSE}
+#Plot for Serial Correlation and Durbin Watson Test
+
+# Shift the residuals to create the lagged residuals
+lagged_residuals3 <- c(NA, model3_stdres[1:(length(model3_stdres)-1)])
+# Plot the i-th residual against the (i-1)-th residual
+plot(lagged_residuals3, model3_stdres, xlab = "(i-1)th Residuals", ylab = "(i)th Residuals")
+abline(h = 0, col = "red")
+abline(v = 0, col = "red")
+
+#Durbin Watson
+
+library(car)
+durbinWatsonTest(model3)
+
+
+```
+```{r}
+# Load the car package
+library(car)
+
+# Compute the VIFs for model3
+vif(model3)
+
+```
+
+```{r}
+library(MASS)
+boxcox(I(ic$sales+0.5) ~ 
+               ic$brand
+              +ic$brand_competitors
+              +ic$distance
+              +ic$holiday
+              +ic$store_type
+              +ic$temperature
+              +ic$distance * ic$brand
+              +ic$distance * ic$store_type
+              +ic$store_type*ic$brand, data = ic)
+```
+
+
+
+```{r}
+icn <- read.csv("ice_creams_new.csv")
+
+icn <- lapply(icn, as.vector)
+
+# Use the predict function to get the predicted values
+# predictions <- predict(model3, icn)
+# print(predictions)
+
+
+ran_predict <- predict(model3, icn , type = "response", level = 0.95, interval = 'confidence')
+print(ran_predict)
+
+```
+
+
+### Model building
+
+
+
+### Model checking for final chosen model
+
+### Conclusion
+
+### Discussion of limitations 
+\
+\
+**Total word count:** insert your word count here.
